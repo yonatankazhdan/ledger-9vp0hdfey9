@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Money">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Money</title>
+<style>
+/* Only the unlock screens live here; the app brings its own styles inside the encrypted file. */
+:root { --bg: #f5f5f7; --surface: #fff; --ink: #1d1d1f; --muted: #6e6e73; --accent: #0a7d5c; --neg: #d70015; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root { --bg: #000; --surface: #1c1c1e; --ink: #f5f5f7; --muted: #98989d; --accent: #30d19c; --neg: #ff453a; color-scheme: dark; } }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+.gate { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px calc(24px + env(safe-area-inset-bottom)); box-sizing: border-box; }
+.card { width: 100%; max-width: 380px; background: var(--surface); border-radius: 22px; padding: 28px 22px; display: grid; gap: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06); }
+.mark { width: 56px; height: 56px; border-radius: 15px; background: var(--accent); display: grid; place-items: center; }
+.mark svg { width: 30px; height: 30px; fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+h1 { margin: 0; font-size: 1.6rem; letter-spacing: -0.02em; }
+p { margin: 0; color: var(--muted); }
+ol { margin: 0; padding-left: 20px; color: var(--muted); display: grid; gap: 6px; }
+input[type=password] { font: inherit; width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 12px; border: 1px solid transparent; background: color-mix(in srgb, var(--ink) 6%, transparent); color: inherit; }
+input[type=password]:focus { outline: none; border-color: var(--accent); }
+button { font: inherit; font-weight: 600; border: 0; border-radius: 12px; padding: 13px 16px; background: var(--accent); color: #fff; cursor: pointer; }
+button.ghost { background: transparent; color: var(--accent); padding: 6px; }
+button:disabled { opacity: .5; }
+.err { color: var(--neg); font-weight: 600; }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div id="gate" class="gate hidden">
+  <div class="card">
+    <div class="mark"><svg viewBox="0 0 24 24"><path d="M4 19h16M6 15l4-5 3 3 5-7"/></svg></div>
+    <div id="step-file" class="hidden" style="display:grid;gap:14px">
+      <h1>Your money</h1>
+      <p>Open the file your Mac keeps for this phone.</p>
+      <ol><li>Tap <strong>Choose file</strong></li><li>Go to <strong>iCloud Drive → Money Phone</strong></li><li>Pick <strong>money.mtp</strong></li></ol>
+      <button id="pick">Choose file</button>
+    </div>
+    <div id="step-pass" class="hidden" style="display:grid;gap:14px">
+      <h1>Unlock</h1>
+      <p>Type your iPhone password (the one you set on the Mac).</p>
+      <input id="pw" type="password" autocomplete="current-password" placeholder="Password">
+      <button id="unlock">Unlock</button>
+      <button id="other" class="ghost">Choose a different file</button>
+    </div>
+    <p id="msg" class="err hidden" role="alert"></p>
+  </div>
+</div>
+<div id="root"></div>
+<script src="vendor/preact.js"></script>
+<script src="vendor/chart.js"></script>
+<script src="loader.js"></script>
+</body>
+</html>
