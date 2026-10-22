@@ -1,6 +1,6 @@
 /* Generic loader for an encrypted personal app. It holds no data and no app logic of its own:
-   it opens a file you pick (iCloud Drive), decrypts it with your password, and runs what's inside.
-   Nothing is sent anywhere (see the Content-Security-Policy in index.html).
+   it downloads the encrypted file from this site (or opens one you pick from iCloud Drive), decrypts it
+   with your password, and runs what's inside. Nothing is sent anywhere (see the Content-Security-Policy in index.html).
    File: "MTP1" | salt (16) | iv (12) | AES-256-GCM ciphertext+tag; key = PBKDF2-SHA256(password, salt, 600,000). */
 (function () {
   'use strict';
@@ -63,6 +63,31 @@
       window.addEventListener('focus', () => setTimeout(() => finish(inp.files && inp.files[0] ? inp.files[0] : null), 1500), { once: true });
       inp.click();
     });
+  }
+
+  // ---------- downloading the newest file from this site ----------
+  // Returns the file's bytes, or null when offline / not there.
+  async function download() {
+    try {
+      const r = await fetch('money.mtp?t=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) return null;
+      const buf = await r.arrayBuffer();
+      parse(buf);
+      return buf;
+    } catch (e) { return null; }
+  }
+  // Swaps in the downloaded file when it's newer than what's shown. Returns 'new', 'same' or null (offline).
+  async function checkOnline() {
+    if (!ctx) return null;
+    const buf = await download();
+    if (!buf) return null;
+    if (b64(parse(buf).salt) !== b64(ctx.salt)) throw new Error('The Mac uses a different password now. Tap Lock, then open it again.');
+    const next = await open(buf, ctx.key);
+    if (!(next.at > ctx.data.at)) return 'same';
+    await kv.set('snap', buf);
+    await prunePending(next.docs);
+    location.reload();
+    return 'new';
   }
 
   // ---------- gate screens ----------
@@ -153,7 +178,10 @@
       isPending: id => !!pending[id],
       info: () => ({ at: data.at, pending: Object.keys(pending).length, sentAt: ctx.sentAt || null }),
       async update() {
-        const f = await pickFile();
+        const r = await checkOnline();
+        if (r === 'same') return 'Already up to date.';
+        if (r === 'new') return 'Updated.';
+        const f = await pickFile(); // offline: pick the file from iCloud Drive instead
         if (!f) return '';
         const buf = await f.arrayBuffer();
         const p = parse(buf);
@@ -199,6 +227,8 @@
     ctx.sentAt = await kv.get('sentAt');
     await loadScript(data.code.logic);
     await loadScript(data.code.app);
+    checkOnline().catch(() => {});
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkOnline().catch(() => {}); });
   }
 
   // ---------- start ----------
@@ -206,7 +236,10 @@
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
     try {
       const snap = await kv.get('snap');
-      if (!snap) return show('file');
+      if (!snap) {
+        fileBuf = await download();
+        return show(fileBuf ? 'pass' : 'file');
+      }
       const key = await kv.get('key');
       if (!key) return show('pass');
       const data = await open(snap, key);
